@@ -75,4 +75,14 @@ class AppTheme {
       height: 2.2,
     );
   }
+
+  /// Police Warsh (WarshKFGQPC) pour les versets coraniques dans les أوراد
+  static TextStyle warshVerse({double size = 20, Color color = darkBrown}) {
+    return TextStyle(
+      fontFamily: 'WarshKFGQPC',
+      fontSize: size,
+      color: color,
+      height: 2.2,
+    );
+  }
 }

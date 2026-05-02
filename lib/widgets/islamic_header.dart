@@ -5,59 +5,108 @@ class IslamicHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget? trailing;
+  final bool showBack;
 
   const IslamicHeader({
     super.key,
     required this.title,
     this.subtitle,
     this.trailing,
+    this.showBack = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-      decoration: const BoxDecoration(
-        color: AppTheme.primaryGreen,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
-      child: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const _OrnamentLine(),
-                const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: AppTheme.arabicTitle(size: 22, color: Colors.white),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(width: 12),
-                const _OrnamentLine(),
-              ],
+    final topPadding = MediaQuery.of(context).padding.top;
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+      child: Stack(
+        children: [
+          // Image de fond
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/hero_mosque.png',
+              fit: BoxFit.cover,
             ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                subtitle!,
-                style: AppTheme.arabicBody(
-                  size: 14,
-                  color: Colors.white.withValues(alpha: 0.85),
+          ),
+          // Overlay vert semi-transparent
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.primaryGreen.withValues(alpha: 0.72),
+                    AppTheme.primaryGreen.withValues(alpha: 0.85),
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
-            ],
-            if (trailing != null) ...[
-              const SizedBox(height: 10),
-              trailing!,
-            ],
-          ],
-        ),
+            ),
+          ),
+          // Contenu
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.fromLTRB(20, topPadding + 16, 20, 20),
+            child: Directionality(
+              textDirection: TextDirection.rtl,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (showBack)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (showBack) const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const _OrnamentLine(),
+                      const SizedBox(width: 12),
+                      Text(
+                        title,
+                        style: AppTheme.arabicTitle(size: 22, color: Colors.white),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(width: 12),
+                      const _OrnamentLine(),
+                    ],
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      subtitle!,
+                      style: AppTheme.arabicBody(
+                        size: 14,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  if (trailing != null) ...[
+                    const SizedBox(height: 10),
+                    trailing!,
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

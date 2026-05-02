@@ -1,21 +1,40 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/dalail_screen.dart';
+import 'screens/wazifa_screen.dart';
 import 'screens/wird_aam_screen.dart';
+import 'screens/wird_yawmi_screen.dart';
 import 'screens/tahsin_screen.dart';
 import 'screens/quran_screen.dart';
 import 'providers/reading_settings_provider.dart';
+import 'services/notification_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([
+
+  // Initialiser les notifications sans bloquer le démarrage si elles échouent
+  try {
+    await NotificationService.instance.init();
+  } catch (_) {
+    // Notifications non critiques — l'app continue sans elles
+  }
+
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  runApp(const TarikaApp());
+
+  runZonedGuarded(
+    () => runApp(const TarikaApp()),
+    (error, stack) {
+      // Erreurs non attrapées loguées sans crasher l'app
+      debugPrint('Erreur non attrapée: $error\n$stack');
+    },
+  );
 }
 
 class TarikaApp extends StatelessWidget {
@@ -50,19 +69,23 @@ class MainNavState extends State<MainNav> {
   }
 
   final List<Widget> _screens = const [
-    HomeScreen(),
-    DalailScreen(),
-    WirdAamScreen(),
-    TahsinScreen(),
-    QuranScreen(),
+    HomeScreen(),      // 0
+    DalailScreen(),    // 1
+    WazifaScreen(),    // 2
+    WirdAamScreen(),   // 3
+    WirdYawmiScreen(), // 4
+    TahsinScreen(),    // 5
+    QuranScreen(),     // 6
   ];
 
   final List<_NavItem> _navItems = const [
-    _NavItem(label: 'الرئيسية', icon: Icons.home_outlined, activeIcon: Icons.home),
-    _NavItem(label: 'دلائل الخيرات', icon: Icons.auto_stories_outlined, activeIcon: Icons.auto_stories),
-    _NavItem(label: 'الورد العام', icon: Icons.menu_book_outlined, activeIcon: Icons.menu_book),
-    _NavItem(label: 'التحصين', icon: Icons.shield_outlined, activeIcon: Icons.shield),
-    _NavItem(label: 'القرآن', icon: Icons.mosque_outlined, activeIcon: Icons.mosque),
+    _NavItem(label: 'الرئيسية',   icon: Icons.home_outlined,        activeIcon: Icons.home),
+    _NavItem(label: 'دلائل',      icon: Icons.auto_stories_outlined, activeIcon: Icons.auto_stories),
+    _NavItem(label: 'الوظيفة',   icon: Icons.book_outlined,         activeIcon: Icons.book),
+    _NavItem(label: 'الورد',      icon: Icons.menu_book_outlined,    activeIcon: Icons.menu_book),
+    _NavItem(label: 'اليومي',     icon: Icons.today_outlined,        activeIcon: Icons.today),
+    _NavItem(label: 'التحصين',   icon: Icons.shield_outlined,       activeIcon: Icons.shield),
+    _NavItem(label: 'القرآن',     icon: Icons.mosque_outlined,       activeIcon: Icons.mosque),
   ];
 
   @override
@@ -72,37 +95,41 @@ class MainNavState extends State<MainNav> {
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: AppTheme.primaryGreen,
-          unselectedItemColor: Colors.grey.shade400,
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 10,
+      bottomNavigationBar: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
           ),
-          unselectedLabelStyle: const TextStyle(fontSize: 9),
-          items: _navItems
-              .map(
-                (e) => BottomNavigationBarItem(
-                  icon: Icon(e.icon),
-                  activeIcon: Icon(e.activeIcon),
-                  label: e.label,
-                ),
-              )
-              .toList(),
+          child: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: (index) => setState(() => _currentIndex = index),
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.white,
+            selectedItemColor: AppTheme.primaryGreen,
+            unselectedItemColor: Colors.grey.shade400,
+            selectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 9,
+            ),
+            unselectedLabelStyle: const TextStyle(fontSize: 8),
+            iconSize: 22,
+            items: _navItems
+                .map(
+                  (e) => BottomNavigationBarItem(
+                    icon: Icon(e.icon),
+                    activeIcon: Icon(e.activeIcon),
+                    label: e.label,
+                  ),
+                )
+                .toList(),
+          ),
         ),
       ),
     );

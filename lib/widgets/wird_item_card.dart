@@ -103,14 +103,53 @@ class _WirdItemCardState extends State<WirdItemCard> {
                 ),
               ),
 
-            // Main text
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                widget.item.text,
-                style: AppTheme.arabicVerse(size: 19),
-                textAlign: TextAlign.center,
+            // ─── Section Aya (optionnelle) ────────────────────────────────
+            if (widget.item.ayaText != null) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                child: _buildAyaRichText(widget.item.ayaText!),
               ),
+              if (widget.item.ayaInstruction != null)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.lightGold.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.gold.withValues(alpha: 0.4)),
+                  ),
+                  child: Text(
+                    '✦ ${widget.item.ayaInstruction!}',
+                    style: AppTheme.arabicBody(size: 14, color: AppTheme.darkBrown),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Divider(
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.2),
+                  thickness: 1,
+                ),
+              ),
+            ],
+
+            // Main text (dhikr ou verset coranique)
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                widget.item.ayaText != null ? 0 : 16,
+                16,
+                16,
+              ),
+              child: widget.item.isQuranVerse && widget.item.startVerseNumber != null
+                  ? _buildQuranRichText(widget.item.text, widget.item.startVerseNumber!)
+                  : Text(
+                      widget.item.text,
+                      style: widget.item.isQuranVerse
+                          ? AppTheme.warshVerse(size: 19)
+                          : AppTheme.arabicVerse(size: 19),
+                      textAlign: TextAlign.center,
+                    ),
             ),
 
             // Instruction
@@ -152,6 +191,109 @@ class _WirdItemCardState extends State<WirdItemCard> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Affiche un texte coranique en parsant les ۝ pour numéroter les versets en vert.
+  Widget _buildQuranRichText(String text, int startVerseNumber) {
+    final parts = text.split(RegExp(r'۝[٠-٩]*'));
+    if (parts.length <= 1) {
+      return Text(
+        text,
+        style: AppTheme.warshVerse(size: 19),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.rtl,
+      );
+    }
+    final spans = <TextSpan>[];
+    for (int i = 0; i < parts.length; i++) {
+      if (parts[i].isNotEmpty) {
+        spans.add(TextSpan(
+          text: parts[i],
+          style: AppTheme.warshVerse(size: 19),
+        ));
+      }
+      if (i < parts.length - 1) {
+        spans.add(_verseCircleSpan(startVerseNumber + i));
+      }
+    }
+    return Text.rich(
+      TextSpan(
+        style: const TextStyle(fontFamily: 'WarshKFGQPC'),
+        children: spans,
+      ),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.rtl,
+    );
+  }
+
+  static String _toArabicNumeral(int n) {
+    const d = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    return n.toString().split('').map((c) => d[int.parse(c)]).join();
+  }
+
+  /// Chiffre arabo-indic en vert : WarshKFGQPC dessine l'ornement autour automatiquement.
+  static TextSpan _verseCircleSpan(int verseNumber) {
+    return TextSpan(
+      text: ' ${_toArabicNumeral(verseNumber)} ',
+      style: TextStyle(
+        color: AppTheme.primaryGreen,
+        fontSize: 19,
+        fontWeight: FontWeight.bold,
+        height: 2.2,
+      ),
+    );
+  }
+
+  /// Affiche l'ayaText en parsant les marqueurs ۝١٠ pour les rendre en vert.
+  Widget _buildAyaRichText(String ayaText) {
+    // Regex : ۝ (U+06DD) suivi de chiffres arabo-indics ٠-٩
+    final pattern = RegExp(r'۝([٠-٩]+)');
+    final matches = pattern.allMatches(ayaText).toList();
+
+    if (matches.isEmpty) {
+      return Text(
+        ayaText,
+        style: AppTheme.warshVerse(size: 19),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.rtl,
+      );
+    }
+
+    final spans = <TextSpan>[];
+    int lastIndex = 0;
+
+    for (final match in matches) {
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(
+          text: ayaText.substring(lastIndex, match.start),
+          style: AppTheme.warshVerse(size: 19),
+        ));
+      }
+      // Convertir les chiffres arabo-indics en entier
+      final arabicDigits = match.group(1)!;
+      const arabicZero = 0x0660;
+      final num = int.parse(
+        String.fromCharCodes(arabicDigits.runes.map((r) => r - arabicZero + 48)),
+      );
+      spans.add(_verseCircleSpan(num));
+      lastIndex = match.end;
+    }
+
+    if (lastIndex < ayaText.length) {
+      spans.add(TextSpan(
+        text: ayaText.substring(lastIndex),
+        style: AppTheme.warshVerse(size: 19),
+      ));
+    }
+
+    return Text.rich(
+      TextSpan(
+        style: const TextStyle(fontFamily: 'WarshKFGQPC'),
+        children: spans,
+      ),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.rtl,
     );
   }
 }
