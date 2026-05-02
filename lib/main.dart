@@ -11,6 +11,7 @@ import 'screens/wird_yawmi_screen.dart';
 import 'screens/tahsin_screen.dart';
 import 'screens/quran_screen.dart';
 import 'providers/reading_settings_provider.dart';
+import 'providers/wird_completion_provider.dart';
 import 'services/notification_service.dart';
 
 void main() async {
@@ -42,8 +43,11 @@ class TarikaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ReadingSettingsProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ReadingSettingsProvider()),
+        ChangeNotifierProvider(create: (_) => WirdCompletionProvider()),
+      ],
       child: MaterialApp(
         title: 'أوراد الطريقة',
         debugShowCheckedModeBanner: false,
@@ -61,8 +65,27 @@ class MainNav extends StatefulWidget {
   State<MainNav> createState() => MainNavState();
 }
 
-class MainNavState extends State<MainNav> {
+class MainNavState extends State<MainNav> with WidgetsBindingObserver {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      context.read<WirdCompletionProvider>().checkReset();
+    }
+  }
 
   void setTab(int index) {
     setState(() => _currentIndex = index);

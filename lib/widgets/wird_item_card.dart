@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../models/wird_model.dart';
 
@@ -12,13 +13,63 @@ class WirdItemCard extends StatefulWidget {
   State<WirdItemCard> createState() => _WirdItemCardState();
 }
 
-class _WirdItemCardState extends State<WirdItemCard> {
-  int _currentCount = 0;
+class _WirdItemCardState extends State<WirdItemCard>
+    with SingleTickerProviderStateMixin {
+  int  _currentCount = 0;
+  bool _manualDone   = false; // سبحة يدوية
+
+  late AnimationController _tickController;
+  late Animation<double>   _tickScale;
+  late Animation<double>   _tickOpacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _tickController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _tickScale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: 1.3)
+            .chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 55,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.3, end: 1.0),
+        weight: 15,
+      ),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 30),
+    ]).animate(_tickController);
+    _tickOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 65),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.0),
+        weight: 35,
+      ),
+    ]).animate(_tickController);
+    _tickController.addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        _tickController.reset();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tickController.dispose();
+    super.dispose();
+  }
+
+  void _triggerCompletion() {
+    HapticFeedback.heavyImpact();
+    _tickController.forward(from: 0);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final target = widget.item.repetitions;
-    final isCompleted = _currentCount >= target;
+    final target      = widget.item.repetitions;
+    final isCompleted = _manualDone || _currentCount >= target;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -37,11 +88,13 @@ class _WirdItemCardState extends State<WirdItemCard> {
           ),
         ],
       ),
-      child: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      child: Stack(
+        children: [
+          Directionality(
+            textDirection: TextDirection.rtl,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             // Header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -84,6 +137,7 @@ class _WirdItemCardState extends State<WirdItemCard> {
                     _RepetitionBadge(
                       current: _currentCount,
                       target: target,
+                      manualDone: _manualDone,
                     ),
                 ],
               ),
@@ -169,29 +223,90 @@ class _WirdItemCardState extends State<WirdItemCard> {
                 ),
               ),
 
-            // Counter button
+            // Counter button (repetitions > 1) or simple read toggle (repetitions == 1)
             if (target > 1)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: _CounterButton(
-                  current: _currentCount,
-                  target: target,
-                  onTap: () {
-                    setState(() {
-                      if (_currentCount < target) {
-                        _currentCount++;
-                      } else {
+                child: Column(
+                  children: [
+                    _CounterButton(
+                      current: _currentCount,
+                      target: target,
+                      manualDone: _manualDone,
+                      onTap: () {
+                        if (_manualDone) return; // déjà terminé manuellement
+                        setState(() {
+                          if (_currentCount < target) {
+                            _currentCount++;
+                            if (_currentCount >= target) _triggerCompletion();
+                          } else {
+                            _currentCount = 0;
+                          }
+                        });
+                      },
+                      onReset: () => setState(() {
                         _currentCount = 0;
-                      }
-                    });
-                  },
-                  onReset: () => setState(() => _currentCount = 0),
+                        _manualDone   = false;
+                      }),
+                    ),
+                    // ── Ligne سبحة يدوية ──────────────────────────────
+                    if (!_manualDone && _currentCount < target) ...[        
+                      const SizedBox(height: 6),
+                      _TasbihaButton(
+                        onTap: () {
+                          _triggerCompletion();
+                          setState(() => _manualDone = true);
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: _ReadToggleButton(
+                  isDone: isCompleted,
+                  onToggle: () => setState(() => _currentCount = isCompleted ? 0 : 1),
                 ),
               ),
           ],
         ),
       ),
-    );
+      // ── Overlay animation tick ──────────────────────────────────────────
+      Positioned.fill(
+        child: IgnorePointer(
+          child: AnimatedBuilder(
+            animation: _tickController,
+            builder: (context, _) {
+              if (_tickController.value == 0) return const SizedBox.shrink();
+              return Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.gold.withValues(
+                      alpha: 0.10 * _tickOpacity.value),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Opacity(
+                    opacity: _tickOpacity.value,
+                    child: Transform.scale(
+                      scale: _tickScale.value,
+                      child: const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppTheme.gold,
+                        size: 84,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    ],
+  ),
+);
   }
 
   /// Affiche un texte coranique en parsant les ۝ pour numéroter les versets en vert.
@@ -301,12 +416,17 @@ class _WirdItemCardState extends State<WirdItemCard> {
 class _RepetitionBadge extends StatelessWidget {
   final int current;
   final int target;
+  final bool manualDone;
 
-  const _RepetitionBadge({required this.current, required this.target});
+  const _RepetitionBadge({
+    required this.current,
+    required this.target,
+    this.manualDone = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final done = current >= target;
+    final done = manualDone || current >= target;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -331,6 +451,7 @@ class _RepetitionBadge extends StatelessWidget {
 class _CounterButton extends StatelessWidget {
   final int current;
   final int target;
+  final bool manualDone;
   final VoidCallback onTap;
   final VoidCallback onReset;
 
@@ -339,36 +460,58 @@ class _CounterButton extends StatelessWidget {
     required this.target,
     required this.onTap,
     required this.onReset,
+    this.manualDone = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final done = current >= target;
+    final done = manualDone || current >= target;
+    final showReset = manualDone || current > 0;
     return Row(
       children: [
         Expanded(
           child: GestureDetector(
             onTap: onTap,
-            child: Container(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
               height: 44,
               decoration: BoxDecoration(
-                color: done ? AppTheme.gold : AppTheme.primaryGreen,
+                color: done
+                    ? AppTheme.gold
+                    : AppTheme.primaryGreen.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: done
+                      ? AppTheme.gold
+                      : AppTheme.primaryGreen.withValues(alpha: 0.35),
+                ),
               ),
               child: Center(
-                child: Text(
-                  done ? 'مكتمل ✓' : 'عدّ ($current/$target)',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      done ? Icons.check_circle : Icons.touch_app_outlined,
+                      color: done ? Colors.white : AppTheme.primaryGreen,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      done ? 'قُرِئَ ✓' : 'عدّ ($current/$target)',
+                      style: TextStyle(
+                        color: done ? Colors.white : AppTheme.primaryGreen,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Amiri',
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
         ),
-        if (current > 0) ...[
+        if (showReset) ...[
           const SizedBox(width: 8),
           GestureDetector(
             onTap: onReset,
@@ -385,6 +528,98 @@ class _CounterButton extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bouton "بالسبحة" — marquer terminé sans utiliser le compteur
+// ─────────────────────────────────────────────────────────────────────────────
+class _TasbihaButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _TasbihaButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 38,
+        decoration: BoxDecoration(
+          color: Colors.teal.shade50,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.teal.shade200),
+        ),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.grain, color: Colors.teal.shade600, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                'تم بالسبحة',
+                style: TextStyle(
+                  color: Colors.teal.shade700,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Amiri',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bouton simple "تم القراءة" pour les items à lecture unique
+// ─────────────────────────────────────────────────────────────────────────────
+class _ReadToggleButton extends StatelessWidget {
+  final bool isDone;
+  final VoidCallback onToggle;
+
+  const _ReadToggleButton({required this.isDone, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onToggle,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: 44,
+        decoration: BoxDecoration(
+          color: isDone ? AppTheme.gold : AppTheme.primaryGreen.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isDone ? AppTheme.gold : AppTheme.primaryGreen.withValues(alpha: 0.35),
+          ),
+        ),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isDone ? Icons.check_circle : Icons.circle_outlined,
+                color: isDone ? Colors.white : AppTheme.primaryGreen,
+                size: 18,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                isDone ? 'قُرِئَ ✓' : 'تم القراءة',
+                style: TextStyle(
+                  color: isDone ? Colors.white : AppTheme.primaryGreen,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Amiri',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

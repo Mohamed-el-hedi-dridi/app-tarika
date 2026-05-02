@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 
+import 'prayer_times_service.dart';
+
 class NotificationPrefs {
   final bool morningEnabled;
   final int morningHour;
@@ -10,6 +12,9 @@ class NotificationPrefs {
   final bool eveningEnabled;
   final int eveningHour;
   final int eveningMinute;
+  final bool duhaEnabled;
+  final bool fajrWirdEnabled;
+  final bool maghribWirdEnabled;
 
   const NotificationPrefs({
     required this.morningEnabled,
@@ -18,6 +23,9 @@ class NotificationPrefs {
     required this.eveningEnabled,
     required this.eveningHour,
     required this.eveningMinute,
+    this.duhaEnabled = false,
+    this.fajrWirdEnabled = false,
+    this.maghribWirdEnabled = false,
   });
 }
 
@@ -29,6 +37,10 @@ class NotificationService {
 
   static const int _morningId = 1001;
   static const int _eveningId = 1002;
+  static const int _duhaBase        = 2000;
+  static const int _fajrWirdBase    = 2100;
+  static const int _maghribWirdBase = 2200;
+  static const int _prayerDays      = 14;
 
   static const String _kMorningEnabled = 'notif_morning_enabled';
   static const String _kMorningHour    = 'notif_morning_hour';
@@ -36,6 +48,9 @@ class NotificationService {
   static const String _kEveningEnabled = 'notif_evening_enabled';
   static const String _kEveningHour    = 'notif_evening_hour';
   static const String _kEveningMin     = 'notif_evening_min';
+  static const String _kDuhaEnabled         = 'notif_duha_enabled';
+  static const String _kFajrWirdEnabled     = 'notif_fajr_wird_enabled';
+  static const String _kMaghribWirdEnabled  = 'notif_maghrib_wird_enabled';
 
   Future<void> init() async {
     tz.initializeTimeZones();
@@ -50,8 +65,8 @@ class NotificationService {
       const InitializationSettings(android: android, iOS: ios),
     );
 
-    // Replanifier les notifications existantes au démarrage
     final prefs = await loadPrefs();
+
     await scheduleMorning(
       enabled: prefs.morningEnabled,
       hour: prefs.morningHour,
@@ -62,6 +77,18 @@ class NotificationService {
       hour: prefs.eveningHour,
       minute: prefs.eveningMinute,
     );
+
+    if (prefs.duhaEnabled || prefs.fajrWirdEnabled || prefs.maghribWirdEnabled) {
+      try {
+        final days = await PrayerTimesService.instance.getNextDays(_prayerDays);
+        await _schedulePrayerAlarms(
+          duhaEnabled: prefs.duhaEnabled,
+          fajrWirdEnabled: prefs.fajrWirdEnabled,
+          maghribWirdEnabled: prefs.maghribWirdEnabled,
+          days: days,
+        );
+      } catch (_) {}
+    }
   }
 
   Future<NotificationPrefs> loadPrefs() async {
@@ -73,6 +100,9 @@ class NotificationService {
       eveningEnabled: p.getBool(_kEveningEnabled) ?? false,
       eveningHour:    p.getInt(_kEveningHour)    ?? 19,
       eveningMinute:  p.getInt(_kEveningMin)     ?? 30,
+      duhaEnabled:         p.getBool(_kDuhaEnabled)        ?? false,
+      fajrWirdEnabled:     p.getBool(_kFajrWirdEnabled)    ?? false,
+      maghribWirdEnabled:  p.getBool(_kMaghribWirdEnabled) ?? false,
     );
   }
 
@@ -84,6 +114,9 @@ class NotificationService {
     await p.setBool(_kEveningEnabled, prefs.eveningEnabled);
     await p.setInt(_kEveningHour,    prefs.eveningHour);
     await p.setInt(_kEveningMin,     prefs.eveningMinute);
+    await p.setBool(_kDuhaEnabled,        prefs.duhaEnabled);
+    await p.setBool(_kFajrWirdEnabled,    prefs.fajrWirdEnabled);
+    await p.setBool(_kMaghribWirdEnabled, prefs.maghribWirdEnabled);
   }
 
   Future<void> scheduleMorning({
@@ -140,7 +173,84 @@ class NotificationService {
     );
   }
 
-  // ── helpers ──────────────────────────────────────────────────────────────
+  Future<void> saveAndSchedulePrayerAlarms(NotificationPrefs prefs) async {
+    await _savePrefs(prefs);
+    await _cancelAllPrayerAlarms();
+
+    if (!prefs.duhaEnabled && !prefs.fajrWirdEnabled && !prefs.maghribWirdEnabled) {
+      return;
+    }
+
+    final days = await PrayerTimesService.instance.getNextDays(_prayerDays);
+    await _schedulePrayerAlarms(
+      duhaEnabled: prefs.duhaEnabled,
+      fajrWirdEnabled: prefs.fajrWirdEnabled,
+      maghribWirdEnabled: prefs.maghribWirdEnabled,
+      days: days,
+    );
+  }
+
+  Future<void> _cancelAllPrayerAlarms() async {
+    for (int i = 0; i < _prayerDays; i++) {
+      await _plugin.cancel(_duhaBase + i);
+      await _plugin.cancel(_fajrWirdBase + i);
+      await _plugin.cancel(_maghribWirdBase + i);
+    }
+  }
+
+  Future<void> _schedulePrayerAlarms({
+    required bool duhaEnabled,
+    required bool fajrWirdEnabled,
+    required bool maghribWirdEnabled,
+    required List<DayPrayerTimes> days,
+  }) async {
+    final now = DateTime.now();
+    int duhaCount = 0, fajrCount = 0, maghribCount = 0;
+
+    for (final day in days) {
+      if (duhaEnabled && day.duha.isAfter(now) && duhaCount < _prayerDays) {
+        await _plugin.zonedSchedule(
+          _duhaBase + duhaCount,
+          'صلاة الضحى ☀️',
+          'حان وقت صلاة الضحى',
+          tz.TZDateTime.from(day.duha, tz.local),
+          _notifDetails('duha'),
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.wallClockTime,
+        );
+        duhaCount++;
+      }
+
+      if (fajrWirdEnabled && day.fajrWird.isAfter(now) && fajrCount < _prayerDays) {
+        await _plugin.zonedSchedule(
+          _fajrWirdBase + fajrCount,
+          'ورد الصباح 🌅',
+          'حان وقت ورد الصباح — ٣٠ دقيقة بعد الفجر',
+          tz.TZDateTime.from(day.fajrWird, tz.local),
+          _notifDetails('morning'),
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.wallClockTime,
+        );
+        fajrCount++;
+      }
+
+      if (maghribWirdEnabled && day.maghribWird.isAfter(now) && maghribCount < _prayerDays) {
+        await _plugin.zonedSchedule(
+          _maghribWirdBase + maghribCount,
+          'ورد المساء 🌙',
+          'حان وقت ورد المساء — ٢٠ دقيقة بعد المغرب',
+          tz.TZDateTime.from(day.maghribWird, tz.local),
+          _notifDetails('evening'),
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.wallClockTime,
+        );
+        maghribCount++;
+      }
+    }
+  }
 
   tz.TZDateTime _nextInstanceOf(int hour, int minute) {
     final now = tz.TZDateTime.now(tz.local);
@@ -159,12 +269,26 @@ class NotificationService {
   }
 
   NotificationDetails _notifDetails(String channel) {
+    String channelName;
+    String channelDesc;
+    switch (channel) {
+      case 'morning':
+        channelName = 'ورد الصباح';
+        channelDesc = 'تذكير بورد الصباح';
+      case 'evening':
+        channelName = 'ورد المساء';
+        channelDesc = 'تذكير بورد المساء';
+      case 'duha':
+        channelName = 'صلاة الضحى';
+        channelDesc = 'تذكير بصلاة الضحى';
+      default:
+        channelName = channel;
+        channelDesc = channel;
+    }
     final android = AndroidNotificationDetails(
       'tarika_$channel',
-      channel == 'morning' ? 'ورد الصباح' : 'ورد المساء',
-      channelDescription: channel == 'morning'
-          ? 'تذكير بورد الصباح'
-          : 'تذكير بورد المساء',
+      channelName,
+      channelDescription: channelDesc,
       importance: Importance.high,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',

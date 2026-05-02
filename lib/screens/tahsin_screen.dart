@@ -20,6 +20,9 @@ class TahsinScreen extends StatelessWidget {
               trailing: _buildBismillah(),
             ),
           ),
+
+          // ── القسم الأول : ورد التحصين قبل الخروج ────────────────────
+          _buildSectionHeader('ورد التحصين قبل الخروج'),
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) => WirdItemCard(
@@ -29,8 +32,46 @@ class TahsinScreen extends StatelessWidget {
               childCount: tahsinItems.length,
             ),
           ),
+
+          // ── القسم الثاني : ذكر التحصين ─────────────────────────────
+          _buildSectionHeader('ذكر التحصين'),
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => WirdItemCard(
+                item: tahsinRuqyaItems[index],
+                index: index,
+              ),
+              childCount: tahsinRuqyaItems.length,
+            ),
+          ),
+
           const SliverToBoxAdapter(child: SizedBox(height: 32)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String label) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 22,
+              decoration: BoxDecoration(
+                color: AppTheme.gold,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: AppTheme.arabicTitle(size: 16, color: AppTheme.darkBrown),
+            ),
+          ],
+        ),
       ),
     );
   }

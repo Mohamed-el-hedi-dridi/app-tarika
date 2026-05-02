@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
 import '../services/notification_service.dart';
+import '../widgets/prayer_times_card.dart';
+import '../providers/wird_completion_provider.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -29,7 +32,9 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 _buildMenuGrid(context),
                 const SizedBox(height: 24),
-                _buildDailyProgress(),
+                const PrayerTimesCard(),
+                const SizedBox(height: 12),
+                _buildDailyProgress(context),
                 const SizedBox(height: 12),
                 const _NotificationSettings(),
                 const SizedBox(height: 24),
@@ -183,65 +188,165 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDailyProgress() {
+  Widget _buildDailyProgress(BuildContext context) {
+    final cp = context.watch<WirdCompletionProvider>();
+    final allWirdDone = cp.isAllDone && cp.isAamAllDone;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.borderGold.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'تذكير',
-              style: AppTheme.arabicTitle(size: 16, color: AppTheme.primaryGreen),
+      child: Column(
+        children: [
+          // ── Bannière "Tout terminé" ───────────────────────────────────────
+          if (allWirdDone) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.primaryGreen.withValues(alpha: 0.85),
+                    AppTheme.lightGreen.withValues(alpha: 0.85),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.gold.withValues(alpha: 0.5)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.check_circle, color: AppTheme.gold, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    'أُتِمَّ الوِرْدُ — بارك الله فيك',
+                    style: AppTheme.arabicTitle(size: 15, color: Colors.white),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 10),
-            _buildReminderRow(
-              Icons.wb_sunny,
-              'وِرْدُ الصَّبَاحِ بَعْدَ صَلَاةِ الصُّبْحِ',
-              Colors.orange,
-            ),
-            const SizedBox(height: 8),
-            _buildReminderRow(
-              Icons.nightlight,
-              'وِرْدُ المَسَاءِ بَعْدَ صَلَاةِ المَغْرِبِ',
-              const Color(0xFF4A235A),
-            ),
-            const SizedBox(height: 8),
-            _buildReminderRow(
-              Icons.home_outlined,
-              'التَّحْصِينُ عِنْدَ الخُرُوجِ مِنَ المَنْزِلِ',
-              const Color(0xFF7B3F00),
-            ),
           ],
-        ),
+          // ── Rappels avec état de complétion ──────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.borderGold.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'تذكير',
+                  style: AppTheme.arabicTitle(size: 16, color: AppTheme.primaryGreen),
+                ),
+                const SizedBox(height: 10),
+                // ── الوظيفة ──────────────────────────────────────────────
+                _buildSectionLabel('الوظيفة'),
+                const SizedBox(height: 6),
+                _buildReminderRow(
+                  Icons.wb_sunny,
+                  'وِرْدُ الصَّبَاحِ بَعْدَ صَلَاةِ الصُّبْحِ',
+                  Colors.orange,
+                  isDone: cp.isSobe7Done,
+                ),
+                const SizedBox(height: 8),
+                _buildReminderRow(
+                  Icons.nightlight,
+                  'وِرْدُ المَسَاءِ بَعْدَ صَلَاةِ المَغْرِبِ',
+                  const Color(0xFF4A235A),
+                  isDone: cp.isMasa2Done,
+                ),
+                const SizedBox(height: 12),
+                // ── الورد العام ───────────────────────────────────────────
+                _buildSectionLabel('الورد العام'),
+                const SizedBox(height: 6),
+                _buildReminderRow(
+                  Icons.wb_sunny,
+                  'الوِرْدُ العَامُ بَعْدَ صَلَاةِ الصُّبْحِ',
+                  Colors.orange,
+                  isDone: cp.isAamSobe7Done,
+                ),
+                const SizedBox(height: 8),
+                _buildReminderRow(
+                  Icons.nightlight,
+                  'الوِرْدُ العَامُ بَعْدَ صَلَاةِ المَغْرِبِ',
+                  const Color(0xFF4A235A),
+                  isDone: cp.isAamMasa2Done,
+                ),
+                const SizedBox(height: 12),
+                // ── تحصين ─────────────────────────────────────────────────
+                _buildReminderRow(
+                  Icons.home_outlined,
+                  'التَّحْصِينُ عِنْدَ الخُرُوجِ مِنَ المَنْزِلِ',
+                  const Color(0xFF7B3F00),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildReminderRow(IconData icon, String text, Color color) {
+  Widget _buildSectionLabel(String label) {
+    return Row(
+      children: [
+        Expanded(child: Divider(color: AppTheme.borderGold.withValues(alpha: 0.3))),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: AppTheme.arabicBody(
+            size: 12,
+            color: AppTheme.primaryGreen.withValues(alpha: 0.7),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(child: Divider(color: AppTheme.borderGold.withValues(alpha: 0.3))),
+      ],
+    );
+  }
+
+  Widget _buildReminderRow(IconData icon, String text, Color color,
+      {bool isDone = false}) {
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color.withValues(alpha: isDone ? 0.2 : 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: color, size: 18),
+          child: Icon(
+            isDone ? Icons.check : icon,
+            color: color,
+            size: 18,
+          ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
             text,
-            style: AppTheme.arabicBody(size: 14, color: AppTheme.darkBrown),
+            style: AppTheme.arabicBody(
+              size: 14,
+              color: isDone
+                  ? AppTheme.darkBrown.withValues(alpha: 0.5)
+                  : AppTheme.darkBrown,
+            ),
           ),
         ),
+        if (isDone)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
+            ),
+            child: Text(
+              'تم',
+              style: AppTheme.arabicBody(size: 12, color: color),
+            ),
+          ),
       ],
     );
   }
@@ -341,60 +446,22 @@ class _NotificationSettingsState extends State<_NotificationSettings> {
     });
   }
 
-  Future<void> _pickTime(BuildContext context, bool isMorning) async {
+  Future<void> _togglePrayer(String key, bool value) async {
     if (_prefs == null) return;
-    final initial = TimeOfDay(
-      hour:   isMorning ? _prefs!.morningHour   : _prefs!.eveningHour,
-      minute: isMorning ? _prefs!.morningMinute : _prefs!.eveningMinute,
+    final updated = NotificationPrefs(
+      morningEnabled: _prefs!.morningEnabled,
+      morningHour:    _prefs!.morningHour,
+      morningMinute:  _prefs!.morningMinute,
+      eveningEnabled: _prefs!.eveningEnabled,
+      eveningHour:    _prefs!.eveningHour,
+      eveningMinute:  _prefs!.eveningMinute,
+      duhaEnabled:        key == 'duha'        ? value : _prefs!.duhaEnabled,
+      fajrWirdEnabled:    key == 'fajrWird'    ? value : _prefs!.fajrWirdEnabled,
+      maghribWirdEnabled: key == 'maghribWird' ? value : _prefs!.maghribWirdEnabled,
     );
-    final picked = await showTimePicker(context: context, initialTime: initial);
-    if (picked == null || !mounted) return;
-    final updated = isMorning
-        ? NotificationPrefs(
-            morningEnabled: _prefs!.morningEnabled,
-            morningHour:    picked.hour,
-            morningMinute:  picked.minute,
-            eveningEnabled: _prefs!.eveningEnabled,
-            eveningHour:    _prefs!.eveningHour,
-            eveningMinute:  _prefs!.eveningMinute,
-          )
-        : NotificationPrefs(
-            morningEnabled: _prefs!.morningEnabled,
-            morningHour:    _prefs!.morningHour,
-            morningMinute:  _prefs!.morningMinute,
-            eveningEnabled: _prefs!.eveningEnabled,
-            eveningHour:    picked.hour,
-            eveningMinute:  picked.minute,
-          );
-    await NotificationService.instance.saveAndSchedule(updated);
+    await NotificationService.instance.saveAndSchedulePrayerAlarms(updated);
     if (mounted) setState(() => _prefs = updated);
   }
-
-  Future<void> _toggle(bool isMorning, bool value) async {
-    if (_prefs == null) return;
-    final updated = isMorning
-        ? NotificationPrefs(
-            morningEnabled: value,
-            morningHour:    _prefs!.morningHour,
-            morningMinute:  _prefs!.morningMinute,
-            eveningEnabled: _prefs!.eveningEnabled,
-            eveningHour:    _prefs!.eveningHour,
-            eveningMinute:  _prefs!.eveningMinute,
-          )
-        : NotificationPrefs(
-            morningEnabled: _prefs!.morningEnabled,
-            morningHour:    _prefs!.morningHour,
-            morningMinute:  _prefs!.morningMinute,
-            eveningEnabled: value,
-            eveningHour:    _prefs!.eveningHour,
-            eveningMinute:  _prefs!.eveningMinute,
-          );
-    await NotificationService.instance.saveAndSchedule(updated);
-    if (mounted) setState(() => _prefs = updated);
-  }
-
-  String _fmt(int h, int m) =>
-      '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
@@ -427,27 +494,32 @@ class _NotificationSettingsState extends State<_NotificationSettings> {
               const SizedBox(height: 12),
               if (_prefs == null)
                 const Center(child: CircularProgressIndicator())
-              else ...[
-                _NotifRow(
-                  icon: Icons.wb_sunny,
+              else ...[                
+                _NotifSimpleRow(
+                  icon: Icons.brightness_3,
                   label: 'ورد الصباح',
-                  sublabel: 'بعد صلاة الصبح',
-                  color: Colors.orange,
-                  enabled: _prefs!.morningEnabled,
-                  time: _fmt(_prefs!.morningHour, _prefs!.morningMinute),
-                  onToggle: (v) => _toggle(true, v),
-                  onTimeTap: () => _pickTime(context, true),
+                  sublabel: 'بعد الفجر بـ ٣٠ دقيقة',
+                  color: Colors.indigo,
+                  enabled: _prefs!.fajrWirdEnabled,
+                  onToggle: (v) => _togglePrayer('fajrWird', v),
                 ),
-                const Divider(height: 16),
-                _NotifRow(
-                  icon: Icons.nightlight,
+                const SizedBox(height: 6),
+                _NotifSimpleRow(
+                  icon: Icons.wb_sunny_outlined,
+                  label: 'صلاة الضحى',
+                  sublabel: 'بعد الشروق بـ ٢٠ دقيقة',
+                  color: Colors.amber.shade700,
+                  enabled: _prefs!.duhaEnabled,
+                  onToggle: (v) => _togglePrayer('duha', v),
+                ),
+                const SizedBox(height: 6),
+                _NotifSimpleRow(
+                  icon: Icons.nightlight_round,
                   label: 'ورد المساء',
-                  sublabel: 'بعد صلاة المغرب',
+                  sublabel: 'بعد المغرب بـ ٢٠ دقيقة',
                   color: const Color(0xFF4A235A),
-                  enabled: _prefs!.eveningEnabled,
-                  time: _fmt(_prefs!.eveningHour, _prefs!.eveningMinute),
-                  onToggle: (v) => _toggle(false, v),
-                  onTimeTap: () => _pickTime(context, false),
+                  enabled: _prefs!.maghribWirdEnabled,
+                  onToggle: (v) => _togglePrayer('maghribWird', v),
                 ),
               ],
             ],
@@ -458,25 +530,21 @@ class _NotificationSettingsState extends State<_NotificationSettings> {
   }
 }
 
-class _NotifRow extends StatelessWidget {
+class _NotifSimpleRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String sublabel;
   final Color color;
   final bool enabled;
-  final String time;
   final ValueChanged<bool> onToggle;
-  final VoidCallback onTimeTap;
 
-  const _NotifRow({
+  const _NotifSimpleRow({
     required this.icon,
     required this.label,
     required this.sublabel,
     required this.color,
     required this.enabled,
-    required this.time,
     required this.onToggle,
-    required this.onTimeTap,
   });
 
   @override
@@ -497,8 +565,7 @@ class _NotifRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label,
-                  style: AppTheme.arabicBody(
-                      size: 14, color: AppTheme.darkBrown)),
+                  style: AppTheme.arabicBody(size: 14, color: AppTheme.darkBrown)),
               Text(sublabel,
                   style: AppTheme.arabicBody(
                       size: 12,
@@ -506,28 +573,6 @@ class _NotifRow extends StatelessWidget {
             ],
           ),
         ),
-        if (enabled)
-          GestureDetector(
-            onTap: onTimeTap,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: color.withValues(alpha: 0.3)),
-              ),
-              child: Text(
-                time,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ),
-          ),
-        const SizedBox(width: 8),
         Switch(
           value: enabled,
           onChanged: onToggle,
