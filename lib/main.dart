@@ -13,6 +13,7 @@ import 'screens/quran_screen.dart';
 import 'providers/reading_settings_provider.dart';
 import 'providers/wird_completion_provider.dart';
 import 'services/notification_service.dart';
+import 'services/update_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,6 +73,10 @@ class MainNavState extends State<MainNav> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Vérifier les mises à jour OTA après le premier rendu
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UpdateService.checkForUpdate(context);
+    });
   }
 
   @override
