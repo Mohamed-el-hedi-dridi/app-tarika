@@ -23,12 +23,15 @@ import '../theme/app_theme.dart';
 //    "changelog": "Corrections et nouvelles fonctionnalités"
 //  }
 //
-//  ⬇️  Modifier _versionJsonUrl pour pointer vers votre hébergement.
-//     Recommandé : GitHub Releases (fichier raw dans un repo public/privé).
+//  version.json est hébergé à la racine du repo GitHub :
+//  https://github.com/Mohamed-el-hedi-dridi/app-tarika/blob/main/version.json
+//
+//  APK via GitHub Releases :
+//  https://github.com/Mohamed-el-hedi-dridi/app-tarika/releases/download/vX.Y.Z/tarika.apk
 // ─────────────────────────────────────────────────────────────────────────────
 class UpdateService {
   static const String _versionJsonUrl =
-      'https://raw.githubusercontent.com/VOTRE_COMPTE/tarika-releases/main/version.json';
+      'https://raw.githubusercontent.com/Mohamed-el-hedi-dridi/app-tarika/main/version.json';
 
   /// À appeler via WidgetsBinding.addPostFrameCallback après le premier rendu.
   static Future<void> checkForUpdate(BuildContext context) async {
