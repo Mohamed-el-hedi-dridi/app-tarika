@@ -240,23 +240,6 @@ class HomeScreen extends StatelessWidget {
                   style: AppTheme.arabicTitle(size: 16, color: AppTheme.primaryGreen),
                 ),
                 const SizedBox(height: 10),
-                // ── الوظيفة ──────────────────────────────────────────────
-                _buildSectionLabel('الوظيفة'),
-                const SizedBox(height: 6),
-                _buildReminderRow(
-                  Icons.wb_sunny,
-                  'وِرْدُ الصَّبَاحِ بَعْدَ صَلَاةِ الصُّبْحِ',
-                  Colors.orange,
-                  isDone: cp.isSobe7Done,
-                ),
-                const SizedBox(height: 8),
-                _buildReminderRow(
-                  Icons.nightlight,
-                  'وِرْدُ المَسَاءِ بَعْدَ صَلَاةِ المَغْرِبِ',
-                  const Color(0xFF4A235A),
-                  isDone: cp.isMasa2Done,
-                ),
-                const SizedBox(height: 12),
                 // ── الورد العام ───────────────────────────────────────────
                 _buildSectionLabel('الورد العام'),
                 const SizedBox(height: 6),
@@ -458,6 +441,9 @@ class _NotificationSettingsState extends State<_NotificationSettings> {
       duhaEnabled:        key == 'duha'        ? value : _prefs!.duhaEnabled,
       fajrWirdEnabled:    key == 'fajrWird'    ? value : _prefs!.fajrWirdEnabled,
       maghribWirdEnabled: key == 'maghribWird' ? value : _prefs!.maghribWirdEnabled,
+      kahfEnabled:        key == 'kahf'        ? value : _prefs!.kahfEnabled,
+      kahfHour:   _prefs!.kahfHour,
+      kahfMinute: _prefs!.kahfMinute,
     );
     await NotificationService.instance.saveAndSchedulePrayerAlarms(updated);
     if (mounted) setState(() => _prefs = updated);
@@ -520,6 +506,15 @@ class _NotificationSettingsState extends State<_NotificationSettings> {
                   color: const Color(0xFF4A235A),
                   enabled: _prefs!.maghribWirdEnabled,
                   onToggle: (v) => _togglePrayer('maghribWird', v),
+                ),
+                const SizedBox(height: 6),
+                _NotifSimpleRow(
+                  icon: Icons.menu_book_rounded,
+                  label: 'سورة الكهف',
+                  sublabel: 'كل يوم جمعة في الساعة ٨:٠٠',
+                  color: AppTheme.primaryGreen,
+                  enabled: _prefs!.kahfEnabled,
+                  onToggle: (v) => _togglePrayer('kahf', v),
                 ),
               ],
             ],

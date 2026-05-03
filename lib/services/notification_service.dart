@@ -26,7 +26,14 @@ class NotificationPrefs {
     this.duhaEnabled = false,
     this.fajrWirdEnabled = false,
     this.maghribWirdEnabled = false,
+    this.kahfEnabled = false,
+    this.kahfHour = 8,
+    this.kahfMinute = 0,
   });
+
+  final bool kahfEnabled;
+  final int  kahfHour;
+  final int  kahfMinute;
 }
 
 class NotificationService {
@@ -37,6 +44,7 @@ class NotificationService {
 
   static const int _morningId = 1001;
   static const int _eveningId = 1002;
+  static const int _kahfId   = 1003;
   static const int _duhaBase        = 2000;
   static const int _fajrWirdBase    = 2100;
   static const int _maghribWirdBase = 2200;
@@ -51,6 +59,9 @@ class NotificationService {
   static const String _kDuhaEnabled         = 'notif_duha_enabled';
   static const String _kFajrWirdEnabled     = 'notif_fajr_wird_enabled';
   static const String _kMaghribWirdEnabled  = 'notif_maghrib_wird_enabled';
+  static const String _kKahfEnabled         = 'notif_kahf_enabled';
+  static const String _kKahfHour            = 'notif_kahf_hour';
+  static const String _kKahfMin             = 'notif_kahf_min';
 
   Future<void> init() async {
     tz.initializeTimeZones();
@@ -78,6 +89,12 @@ class NotificationService {
       minute: prefs.eveningMinute,
     );
 
+    await scheduleKahf(
+      enabled: prefs.kahfEnabled,
+      hour: prefs.kahfHour,
+      minute: prefs.kahfMinute,
+    );
+
     if (prefs.duhaEnabled || prefs.fajrWirdEnabled || prefs.maghribWirdEnabled) {
       try {
         final days = await PrayerTimesService.instance.getNextDays(_prayerDays);
@@ -103,6 +120,9 @@ class NotificationService {
       duhaEnabled:         p.getBool(_kDuhaEnabled)        ?? false,
       fajrWirdEnabled:     p.getBool(_kFajrWirdEnabled)    ?? false,
       maghribWirdEnabled:  p.getBool(_kMaghribWirdEnabled) ?? false,
+      kahfEnabled:         p.getBool(_kKahfEnabled)        ?? false,
+      kahfHour:            p.getInt(_kKahfHour)            ?? 8,
+      kahfMinute:          p.getInt(_kKahfMin)             ?? 0,
     );
   }
 
@@ -117,6 +137,9 @@ class NotificationService {
     await p.setBool(_kDuhaEnabled,        prefs.duhaEnabled);
     await p.setBool(_kFajrWirdEnabled,    prefs.fajrWirdEnabled);
     await p.setBool(_kMaghribWirdEnabled, prefs.maghribWirdEnabled);
+    await p.setBool(_kKahfEnabled,        prefs.kahfEnabled);
+    await p.setInt(_kKahfHour,            prefs.kahfHour);
+    await p.setInt(_kKahfMin,             prefs.kahfMinute);
   }
 
   Future<void> scheduleMorning({
@@ -159,6 +182,37 @@ class NotificationService {
     );
   }
 
+  Future<void> scheduleKahf({
+    required bool enabled,
+    required int hour,
+    required int minute,
+  }) async {
+    await _plugin.cancel(_kahfId);
+    if (!enabled) return;
+    await _plugin.zonedSchedule(
+      _kahfId,
+      'سورة الكهف 📖',
+      'يوم الجمعة — لا تنسَ قراءة سورة الكهف',
+      _nextFridayAt(hour, minute),
+      _notifDetails('kahf'),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.wallClockTime,
+    );
+  }
+
+  /// Prochain vendredi à l'heure donnée (DateTime.friday == 5)
+  tz.TZDateTime _nextFridayAt(int hour, int minute) {
+    final now = tz.TZDateTime.now(tz.local);
+    var candidate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    // Avancer jusqu'au prochain vendredi
+    while (candidate.weekday != DateTime.friday || candidate.isBefore(now)) {
+      candidate = candidate.add(const Duration(days: 1));
+    }
+    return candidate;
+  }
+
   Future<void> saveAndSchedule(NotificationPrefs prefs) async {
     await _savePrefs(prefs);
     await scheduleMorning(
@@ -171,11 +225,23 @@ class NotificationService {
       hour: prefs.eveningHour,
       minute: prefs.eveningMinute,
     );
+    await scheduleKahf(
+      enabled: prefs.kahfEnabled,
+      hour: prefs.kahfHour,
+      minute: prefs.kahfMinute,
+    );
   }
 
   Future<void> saveAndSchedulePrayerAlarms(NotificationPrefs prefs) async {
     await _savePrefs(prefs);
     await _cancelAllPrayerAlarms();
+
+    // Kahf (hebdomadaire — indépendant des prières calculées)
+    await scheduleKahf(
+      enabled: prefs.kahfEnabled,
+      hour: prefs.kahfHour,
+      minute: prefs.kahfMinute,
+    );
 
     if (!prefs.duhaEnabled && !prefs.fajrWirdEnabled && !prefs.maghribWirdEnabled) {
       return;
@@ -281,6 +347,9 @@ class NotificationService {
       case 'duha':
         channelName = 'صلاة الضحى';
         channelDesc = 'تذكير بصلاة الضحى';
+      case 'kahf':
+        channelName = 'سورة الكهف';
+        channelDesc = 'تذكير بقراءة سورة الكهف يوم الجمعة';
       default:
         channelName = channel;
         channelDesc = channel;
