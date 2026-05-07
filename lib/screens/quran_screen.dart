@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import '../widgets/islamic_header.dart';
 import '../providers/reading_settings_provider.dart';
@@ -14,8 +15,12 @@ class QuranScreen extends StatefulWidget {
 
 class _QuranScreenState extends State<QuranScreen> {
   int _currentHizb = 1;
+  int _wirdStartHizb = 1;
   static const int totalHizbs = 60;
   static const int dailyHizbs = 4;
+
+  static const _kCurrentHizb = 'q_current_hizb';
+  static const _kWirdStart = 'q_wird_start';
 
   final Map<int, List<QuranVerse>> _cache = {};
   bool _isLoading = false;
@@ -24,10 +29,25 @@ class _QuranScreenState extends State<QuranScreen> {
   @override
   void initState() {
     super.initState();
-    final today = DateTime.now();
-    final dayOfYear = today.difference(DateTime(today.year, 1, 1)).inDays;
-    _currentHizb = ((dayOfYear * dailyHizbs) % totalHizbs) + 1;
+    _loadState();
+  }
+
+  Future<void> _loadState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedHizb = prefs.getInt(_kCurrentHizb);
+    final savedStart = prefs.getInt(_kWirdStart);
+    if (!mounted) return;
+    setState(() {
+      _wirdStartHizb = (savedStart ?? 1).clamp(1, totalHizbs);
+      _currentHizb = (savedHizb ?? _wirdStartHizb).clamp(1, totalHizbs);
+    });
     _loadHizb(_currentHizb);
+  }
+
+  Future<void> _saveState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kCurrentHizb, _currentHizb);
+    await prefs.setInt(_kWirdStart, _wirdStartHizb);
   }
 
   Future<void> _loadHizb(int hizb) async {
@@ -57,6 +77,32 @@ class _QuranScreenState extends State<QuranScreen> {
     if (hizb == _currentHizb) return;
     setState(() => _currentHizb = hizb);
     _loadHizb(hizb);
+    _saveState();
+  }
+
+  Future<void> _changeWirdStart(int newStart) async {
+    setState(() {
+      _wirdStartHizb = newStart;
+      _currentHizb = newStart;
+    });
+    _loadHizb(newStart);
+    _saveState();
+  }
+
+  void _showPickWirdStart() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _WirdStartPickerSheet(
+        currentStart: _wirdStartHizb,
+        totalHizbs: totalHizbs,
+        onSelected: (h) {
+          Navigator.pop(context);
+          _changeWirdStart(h);
+        },
+      ),
+    );
   }
 
   void _showReadingSettings(BuildContext ctx) {
@@ -70,10 +116,6 @@ class _QuranScreenState extends State<QuranScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final today = DateTime.now();
-    final dayOfYear = today.difference(DateTime(today.year, 1, 1)).inDays;
-    final suggestedStart = ((dayOfYear * dailyHizbs) % totalHizbs) + 1;
-
     return Scaffold(
       backgroundColor: AppTheme.cream,
       body: Column(
@@ -91,7 +133,7 @@ class _QuranScreenState extends State<QuranScreen> {
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                      child: _buildDailyCard(suggestedStart),
+                      child: _buildDailyCard(),
                     ),
                   ),
                   // ─── Hizb selector ───────────────────────────────────
@@ -133,8 +175,8 @@ class _QuranScreenState extends State<QuranScreen> {
   }
 
   // ── Daily suggestion card ─────────────────────────────────────────────────
-  Widget _buildDailyCard(int suggestedStart) {
-    final end = suggestedStart + dailyHizbs - 1;
+  Widget _buildDailyCard() {
+    final endHizb = (_wirdStartHizb + dailyHizbs - 2) % totalHizbs + 1;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -147,20 +189,41 @@ class _QuranScreenState extends State<QuranScreen> {
       ),
       child: Column(
         children: [
-          Text(
-            'وردك اليوم',
-            style: AppTheme.arabicTitle(size: 18, color: Colors.white),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const SizedBox(width: 36),
+              Text(
+                'وردك اليوم',
+                style: AppTheme.arabicTitle(size: 18, color: Colors.white),
+              ),
+              GestureDetector(
+                onTap: _showPickWirdStart,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.edit_outlined,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
-            'الحزب $suggestedStart إلى الحزب ${end > totalHizbs ? end - totalHizbs : end}',
+            'الحزب $_wirdStartHizb إلى الحزب $endHizb',
             style: AppTheme.arabicBody(size: 16, color: Colors.white),
           ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(dailyHizbs, (i) {
-              final hizb = ((suggestedStart + i - 1) % totalHizbs) + 1;
+              final hizb = (_wirdStartHizb + i - 1) % totalHizbs + 1;
               final isActive = hizb == _currentHizb;
               return GestureDetector(
                 onTap: () => _selectHizb(hizb),
@@ -725,6 +788,160 @@ class _ReadingSettingsSheet extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Bottom sheet : اختيار نقطة بداية الورد
+// ──────────────────────────────────────────────────────────────────────────
+class _WirdStartPickerSheet extends StatefulWidget {
+  final int currentStart;
+  final int totalHizbs;
+  final ValueChanged<int> onSelected;
+
+  const _WirdStartPickerSheet({
+    required this.currentStart,
+    required this.totalHizbs,
+    required this.onSelected,
+  });
+
+  @override
+  State<_WirdStartPickerSheet> createState() => _WirdStartPickerSheetState();
+}
+
+class _WirdStartPickerSheetState extends State<_WirdStartPickerSheet> {
+  late int _selected;
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.currentStart;
+    // تمرير القائمة إلى الحزب المحدد
+    final offset = ((widget.currentStart - 1) ~/ 5) * 52.0;
+    _scrollController = ScrollController(initialScrollOffset: offset);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.play_circle_outline,
+                    color: AppTheme.primaryGreen, size: 22),
+                const SizedBox(width: 8),
+                Text(
+                  'اختر حزب البداية',
+                  style: AppTheme.arabicTitle(
+                      size: 17, color: AppTheme.primaryGreen),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'سيبدأ وردك من هذا الحزب وينتهي بعد ٤ أحزاب',
+              style: AppTheme.arabicBody(
+                  size: 13, color: AppTheme.darkBrown.withValues(alpha: 0.6)),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 220,
+              child: GridView.builder(
+                controller: _scrollController,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 5,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 1.1,
+                ),
+                itemCount: widget.totalHizbs,
+                itemBuilder: (context, index) {
+                  final hizb = index + 1;
+                  final isSelected = hizb == _selected;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selected = hizb),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppTheme.primaryGreen
+                            : AppTheme.cream,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppTheme.primaryGreen
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$hizb',
+                          style: TextStyle(
+                            color: isSelected
+                                ? Colors.white
+                                : AppTheme.darkBrown,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                onPressed: () => widget.onSelected(_selected),
+                child: Text(
+                  'تأكيد — ابدأ من الحزب $_selected',
+                  style: AppTheme.arabicBody(size: 15, color: Colors.white),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

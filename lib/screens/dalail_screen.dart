@@ -149,7 +149,8 @@ class _DalailScreenState extends State<DalailScreen> {
 
           // ── دعاء البدء ──
           _DuaCard(
-            label: 'دعاء بدء دلائل الخيرات',
+            label: 'دعاء النية',
+
             labelColor: AppTheme.primaryGreen,
             borderColor: AppTheme.primaryGreen,
             icon: Icons.play_circle_outline,
@@ -262,7 +263,7 @@ class _DuaCardState extends State<_DuaCard> {
               child: Consumer<ReadingSettingsProvider>(
                 builder: (context, settings, _) => Text(
                   settings.processText(widget.text),
-                  style: settings.readingStyle(size: 17),
+                  style: settings.readingStyle(),
                   textAlign: TextAlign.center,
                 ),
               ),

@@ -42,7 +42,7 @@ final List<WirdItem> tahsinItems = [
     isQuranVerse: true,
     text: 'إِنَّهُ مِن سُلَيْمَانَ وَإِنَّهُ بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
     repetitions: 3,
-    instruction: 'مع التمسح على الوجه ثم الصلاة على النبي ﷺ',
+    instruction: 'مع المسح على الوجه ثم الصلاة على النبي ﷺ',
     hasIstiada: true,
   ),
   WirdItem(
