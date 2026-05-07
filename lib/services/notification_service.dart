@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -257,10 +258,21 @@ class NotificationService {
   }
 
   Future<void> _cancelAllPrayerAlarms() async {
-    for (int i = 0; i < _prayerDays; i++) {
-      await _plugin.cancel(_duhaBase + i);
-      await _plugin.cancel(_fajrWirdBase + i);
-      await _plugin.cancel(_maghribWirdBase + i);
+    try {
+      for (int i = 0; i < _prayerDays; i++) {
+        await _plugin.cancel(_duhaBase + i);
+        await _plugin.cancel(_fajrWirdBase + i);
+        await _plugin.cancel(_maghribWirdBase + i);
+      }
+    } catch (e) {
+      // Cache SharedPreferences corrompu ou format incompatible avec la version
+      // actuelle du plugin — on supprime tout pour repartir proprement.
+      debugPrint('[Notifications] cancel échoué ($e), cancelAll() en fallback');
+      try {
+        await _plugin.cancelAll();
+      } catch (_) {
+        // Ignore — on continue quand même la planification
+      }
     }
   }
 

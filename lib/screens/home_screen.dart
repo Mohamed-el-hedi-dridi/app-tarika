@@ -345,13 +345,34 @@ class _AppVersionInfo extends StatefulWidget {
   State<_AppVersionInfo> createState() => _AppVersionInfoState();
 }
 
-class _AppVersionInfoState extends State<_AppVersionInfo> {
-  late final Future<PackageInfo> _infoFuture;
+class _AppVersionInfoState extends State<_AppVersionInfo>
+    with WidgetsBindingObserver {
+  late Future<PackageInfo> _infoFuture;
 
   @override
   void initState() {
     super.initState();
-    _infoFuture = PackageInfo.fromPlatform();
+    WidgetsBinding.instance.addObserver(this);
+    _loadPackageInfo();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadPackageInfo();
+    }
+  }
+
+  void _loadPackageInfo() {
+    setState(() {
+      _infoFuture = PackageInfo.fromPlatform();
+    });
   }
 
   @override
@@ -490,7 +511,11 @@ class _NotificationSettingsState extends State<_NotificationSettings> {
       kahfHour:   _prefs!.kahfHour,
       kahfMinute: _prefs!.kahfMinute,
     );
-    await NotificationService.instance.saveAndSchedulePrayerAlarms(updated);
+    try {
+      await NotificationService.instance.saveAndSchedulePrayerAlarms(updated);
+    } catch (e) {
+      debugPrint('[Notifications] _togglePrayer erreur: $e');
+    }
     if (mounted) setState(() => _prefs = updated);
   }
 

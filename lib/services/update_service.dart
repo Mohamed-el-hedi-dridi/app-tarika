@@ -38,23 +38,35 @@ class UpdateService {
     if (!Platform.isAndroid) return;
     try {
       await _doCheck(context);
-    } catch (_) {
-      // Non critique — l'app continue normalement.
+    } catch (e, st) {
+      debugPrint('[OTA] Erreur checkForUpdate: $e\n$st');
     }
   }
 
   static Future<void> _doCheck(BuildContext context) async {
     final info = await PackageInfo.fromPlatform();
     final currentBuild = int.tryParse(info.buildNumber) ?? 0;
+    debugPrint('[OTA] currentBuild=$currentBuild version=${info.version}');
+
+    final versionUrl = '$_versionJsonUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+    debugPrint('[OTA] fetching $versionUrl');
 
     final response = await http
-        .get(Uri.parse(_versionJsonUrl))
+        .get(
+          Uri.parse(versionUrl),
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+          },
+        )
         .timeout(const Duration(seconds: 10));
 
+    debugPrint('[OTA] HTTP status=${response.statusCode}');
     if (response.statusCode != 200) return;
 
     final data = json.decode(response.body) as Map<String, dynamic>;
     final remoteBuild = (data['build'] as num).toInt();
+    debugPrint('[OTA] remoteBuild=$remoteBuild currentBuild=$currentBuild → update=${remoteBuild > currentBuild}');
     if (remoteBuild <= currentBuild) return;
 
     if (!context.mounted) return;
@@ -118,6 +130,17 @@ class _UpdateDialogState extends State<_UpdateDialog> {
           .send(request)
           .timeout(const Duration(minutes: 10));
 
+      debugPrint('[OTA] download status=${response.statusCode} contentType=${response.headers['content-type']}');
+
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}');
+      }
+
+      final contentType = response.headers['content-type'] ?? '';
+      if (contentType.contains('text/html')) {
+        throw Exception('URL invalide — reçu HTML au lieu d\'un APK');
+      }
+
       final total = response.contentLength ?? 0;
       int received = 0;
       int lastNotifiedPercent = -1;
@@ -138,16 +161,23 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       await sink.flush();
       await sink.close();
 
+      debugPrint('[OTA] APK téléchargé : $apkPath (${received} octets)');
       if (mounted) setState(() => _progress = 1.0);
 
-      await OpenFile.open(apkPath);
+      final result = await OpenFile.open(apkPath);
+      debugPrint('[OTA] OpenFile result: type=${result.type} message=${result.message}');
+
+      if (result.type != ResultType.done) {
+        throw Exception('Impossible d\'ouvrir le fichier : ${result.message}');
+      }
 
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
+      debugPrint('[OTA] _startDownload erreur: $e');
       if (mounted) {
         setState(() {
           _downloading = false;
-          _error = 'فشل التحميل — تحقق من اتصالك بالإنترنت';
+          _error = 'فشل التحديث: $e';
         });
       }
     } finally {
