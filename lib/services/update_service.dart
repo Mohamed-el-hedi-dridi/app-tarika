@@ -65,6 +65,8 @@ class UpdateService {
         version: data['version'] as String? ?? '',
         changelog: data['changelog'] as String? ?? '',
         apkUrl: data['apk_url'] as String,
+        remoteBuild: remoteBuild,
+        currentBuild: currentBuild,
       ),
     );
   }
@@ -77,11 +79,15 @@ class _UpdateDialog extends StatefulWidget {
   final String version;
   final String changelog;
   final String apkUrl;
+  final int remoteBuild;
+  final int currentBuild;
 
   const _UpdateDialog({
     required this.version,
     required this.changelog,
     required this.apkUrl,
+    required this.remoteBuild,
+    required this.currentBuild,
   });
 
   @override
@@ -178,10 +184,28 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppTheme.gold.withValues(alpha: 0.4)),
               ),
-              child: Text(
-                'الإصدار ${widget.version}',
-                style: AppTheme.arabicBody(size: 14, color: AppTheme.darkBrown),
-                textAlign: TextAlign.center,
+              child: Column(
+                children: [
+                  Text(
+                    'الإصدار ${widget.version}',
+                    style: AppTheme.arabicBody(size: 14, color: AppTheme.darkBrown),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Build ${widget.remoteBuild}',
+                    style: AppTheme.arabicBody(size: 12, color: AppTheme.darkBrown.withValues(alpha: 0.7)),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (widget.currentBuild > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'البناء الحالي ${widget.currentBuild}',
+                      style: AppTheme.arabicBody(size: 12, color: AppTheme.darkBrown.withValues(alpha: 0.6)),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ],
               ),
             ),
 

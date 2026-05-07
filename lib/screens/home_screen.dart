@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
@@ -37,6 +38,8 @@ class HomeScreen extends StatelessWidget {
                 _buildDailyProgress(context),
                 const SizedBox(height: 12),
                 const _NotificationSettings(),
+                const SizedBox(height: 16),
+                const _AppVersionInfo(),
                 const SizedBox(height: 24),
               ],
             ),
@@ -331,6 +334,48 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _AppVersionInfo extends StatefulWidget {
+  const _AppVersionInfo();
+
+  @override
+  State<_AppVersionInfo> createState() => _AppVersionInfoState();
+}
+
+class _AppVersionInfoState extends State<_AppVersionInfo> {
+  late final Future<PackageInfo> _infoFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _infoFuture = PackageInfo.fromPlatform();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<PackageInfo>(
+      future: _infoFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+
+        final info = snapshot.data!;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'الإصدار ${info.version} (Build ${info.buildNumber})',
+            style: AppTheme.arabicBody(
+              size: 12,
+              color: AppTheme.darkBrown.withValues(alpha: 0.6),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        );
+      },
     );
   }
 }
