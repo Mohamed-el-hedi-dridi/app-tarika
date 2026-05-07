@@ -106,7 +106,7 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
     return Column(
       children: [
         Text(
-          'تعذّر تحديد موقعك. يُستخدم موقع فاس افتراضياً.',
+          'تعذّر تحديد موقعك. يُستخدم موقع تونس افتراضياً.',
           style: AppTheme.arabicBody(size: 13, color: Colors.red.shade700),
           textAlign: TextAlign.center,
         ),

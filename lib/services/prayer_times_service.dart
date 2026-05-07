@@ -40,9 +40,9 @@ class PrayerTimesService {
   PrayerTimesService._();
   static final instance = PrayerTimesService._();
 
-  // Fez, Maroc — coordonnées par défaut
-  static const double _defaultLat = 34.0433;
-  static const double _defaultLng = -5.0000;
+  // Tunis, Tunisie — coordonnées par défaut
+  static const double _defaultLat = 36.8065;
+  static const double _defaultLng = 10.1815;
 
   static const String _kLat = 'prayer_lat';
   static const String _kLng = 'prayer_lng';
