@@ -50,82 +50,15 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildHero(BuildContext context) {
-    final now = DateTime.now();
-    final hour = now.hour;
-    final greeting = hour < 12
-        ? 'صباح الخير'
-        : hour < 17
-            ? 'مساء الخير'
-            : 'مساء النور';
-
-    return SizedBox(
-      height: 220,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            'assets/images/hero_mosque.png',
-            fit: BoxFit.cover,
-          ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppTheme.primaryGreen.withValues(alpha: 0.45),
-                  AppTheme.primaryGreen.withValues(alpha: 0.65),
-                ],
-              ),
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(28),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(width: 40, height: 1, color: AppTheme.gold),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.star, color: AppTheme.gold, size: 16),
-                      const SizedBox(width: 8),
-                      Container(width: 40, height: 1, color: AppTheme.gold),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'الطريقة الصوفية',
-                    style: AppTheme.arabicTitle(size: 26, color: Colors.white),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'أوراد وأذكار يومية',
-                    style: AppTheme.arabicBody(size: 15, color: Colors.white70),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppTheme.gold.withValues(alpha: 0.4)),
-                    ),
-                    child: Text(
-                      greeting,
-                      style: AppTheme.arabicBody(size: 16, color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
+      child: SizedBox(
+        height: 220,
+        width: double.infinity,
+        child: Image.asset(
+          'assets/images/hero_mosque.png',
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }

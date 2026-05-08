@@ -13,8 +13,9 @@ class WirdAamScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.cream,
-      body: CustomScrollView(
-        slivers: [
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
           SliverToBoxAdapter(
             child: IslamicHeader(
               title: 'الورد العام',
@@ -35,7 +36,8 @@ class WirdAamScreen extends StatelessWidget {
             child: _WirdAamCompletionFooter(),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 32)),
-        ],
+          ],
+        ),
       ),
     );
   }

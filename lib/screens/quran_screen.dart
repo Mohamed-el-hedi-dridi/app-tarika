@@ -118,8 +118,9 @@ class _QuranScreenState extends State<QuranScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.cream,
-      body: Column(
-        children: [
+      body: SafeArea(
+        child: Column(
+          children: [
           IslamicHeader(
             title: 'قراءة القرآن الكريم',
             subtitle: 'برواية ورش عن نافع — ٤ أحزاب يومياً',
@@ -170,6 +171,7 @@ class _QuranScreenState extends State<QuranScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

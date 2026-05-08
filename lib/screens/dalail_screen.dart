@@ -58,8 +58,9 @@ class _DalailScreenState extends State<DalailScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.cream,
-      body: Column(
-        children: [
+      body: SafeArea(
+        child: Column(
+          children: [
           IslamicHeader(
             title: 'دلائل الخيرات',
             subtitle: section.arabicName,
@@ -135,6 +136,7 @@ class _DalailScreenState extends State<DalailScreen> {
           ),
           Expanded(child: _buildContent(section)),
         ],
+        ),
       ),
     );
   }
