@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../models/wird_model.dart';
+import '../services/sound_service.dart';
 
 class WirdItemCard extends StatefulWidget {
   final WirdItem item;
@@ -63,6 +64,7 @@ class _WirdItemCardState extends State<WirdItemCard>
 
   void _triggerCompletion() {
     HapticFeedback.heavyImpact();
+    SoundService.playDone();
     _tickController.forward(from: 0);
   }
 
@@ -238,7 +240,12 @@ class _WirdItemCardState extends State<WirdItemCard>
                         setState(() {
                           if (_currentCount < target) {
                             _currentCount++;
-                            if (_currentCount >= target) _triggerCompletion();
+                            if (_currentCount >= target) {
+                              _triggerCompletion();
+                            } else {
+                              HapticFeedback.lightImpact();
+                              SoundService.playClick();
+                            }
                           } else {
                             _currentCount = 0;
                           }
@@ -535,40 +542,110 @@ class _CounterButton extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // Bouton "بالسبحة" — marquer terminé sans utiliser le compteur
 // ─────────────────────────────────────────────────────────────────────────────
-class _TasbihaButton extends StatelessWidget {
+// Bouton "تم بالسبحة" — nécessite un appui long pour éviter les clics accidentels
+// ─────────────────────────────────────────────────────────────────────────────
+class _TasbihaButton extends StatefulWidget {
   final VoidCallback onTap;
 
   const _TasbihaButton({required this.onTap});
 
   @override
+  State<_TasbihaButton> createState() => _TasbihaButtonState();
+}
+
+class _TasbihaButtonState extends State<_TasbihaButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _holdController;
+  bool _holding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _holdController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed && _holding) {
+          HapticFeedback.mediumImpact();
+          widget.onTap();
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _holdController.dispose();
+    super.dispose();
+  }
+
+  void _onLongPressStart(_) {
+    setState(() => _holding = true);
+    _holdController.forward(from: 0);
+  }
+
+  void _onLongPressEnd(_) {
+    if (_holdController.status != AnimationStatus.completed) {
+      _holdController.reverse();
+    }
+    setState(() => _holding = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.teal.shade50,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.teal.shade200),
-        ),
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.grain, color: Colors.teal.shade600, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                'تم بالسبحة',
-                style: TextStyle(
-                  color: Colors.teal.shade700,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Amiri',
-                ),
+      onLongPressStart: _onLongPressStart,
+      onLongPressEnd: _onLongPressEnd,
+      onLongPressCancel: () {
+        _holdController.reverse();
+        setState(() => _holding = false);
+      },
+      child: AnimatedBuilder(
+        animation: _holdController,
+        builder: (context, _) {
+          final progress = _holdController.value;
+          return Container(
+            height: 38,
+            decoration: BoxDecoration(
+              color: Color.lerp(
+                Colors.teal.shade50,
+                Colors.teal.shade200,
+                progress,
               ),
-            ],
-          ),
-        ),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.teal.shade200),
+            ),
+            clipBehavior: Clip.hardEdge,
+            child: Stack(
+              children: [
+                // Barre de progression
+                FractionallySizedBox(
+                  widthFactor: progress,
+                  child: Container(
+                    color: Colors.teal.shade100.withValues(alpha: 0.6),
+                  ),
+                ),
+                Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.grain, color: Colors.teal.shade600, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        _holding ? 'تم بالسبحة…' : 'تم بالسبحة  ◌',
+                        style: TextStyle(
+                          color: Colors.teal.shade700,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Amiri',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
