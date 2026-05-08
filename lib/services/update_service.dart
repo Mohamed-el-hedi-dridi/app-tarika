@@ -161,7 +161,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       await sink.flush();
       await sink.close();
 
-      debugPrint('[OTA] APK téléchargé : $apkPath (${received} octets)');
+      debugPrint('[OTA] APK téléchargé : $apkPath ($received octets)');
       if (mounted) setState(() => _progress = 1.0);
 
       final result = await OpenFile.open(apkPath);
