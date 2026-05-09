@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import '../models/wird_model.dart';
 import '../services/sound_service.dart';
+import '../services/prayer_times_service.dart';
 
 class WirdItemCard extends StatefulWidget {
   final WirdItem item;
   final int index;
+  /// Identifiant de la liste : utilisé pour cloisonner la persistance.
+  /// Suffixe `_m` = session Maghrib (masa2), sinon session Fajr (sobh).
+  /// Exemples : 'yawmi', 'wazifa_s', 'wazifa_m', 'aam_s', 'aam_m', 'tahsin', 'ruqya'.
+  final String listId;
 
-  const WirdItemCard({super.key, required this.item, required this.index});
+  const WirdItemCard({
+    super.key,
+    required this.item,
+    required this.index,
+    required this.listId,
+  });
 
   @override
   State<WirdItemCard> createState() => _WirdItemCardState();
@@ -18,6 +29,7 @@ class _WirdItemCardState extends State<WirdItemCard>
     with SingleTickerProviderStateMixin {
   int  _currentCount = 0;
   bool _manualDone   = false; // سبحة يدوية
+  String? _periodKey; // clé de période pour la persistance
 
   late AnimationController _tickController;
   late Animation<double>   _tickScale;
@@ -54,6 +66,54 @@ class _WirdItemCardState extends State<WirdItemCard>
         _tickController.reset();
       }
     });
+    // Charger l'état persisté après le premier frame
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadProgress());
+  }
+
+  // ── Persistance ──────────────────────────────────────────────────────────
+
+  /// Calcule la clé de période (YYYY-MM-DD) selon le type de session.
+  /// Suffixe `_m`  → reset à Maghrib  |  sinon → reset à Fajr
+  Future<String> _computePeriodKey() async {
+    try {
+      final times = await PrayerTimesService.instance.getToday();
+      final now   = DateTime.now();
+      final isEvening = widget.listId.endsWith('_m');
+      final ref   = isEvening ? times.maghrib : times.fajr;
+      final d     = now.isAfter(ref) ? now : now.subtract(const Duration(days: 1));
+      return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    } catch (_) {
+      final d = DateTime.now();
+      return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    }
+  }
+
+  String _prefsCountKey(String period) =>
+      'dp_${widget.listId}_${period}_${widget.index}_c';
+  String _prefsDoneKey(String period) =>
+      'dp_${widget.listId}_${period}_${widget.index}_d';
+
+  Future<void> _loadProgress() async {
+    final period = await _computePeriodKey();
+    final prefs  = await SharedPreferences.getInstance();
+    final count  = prefs.getInt(_prefsCountKey(period))  ?? 0;
+    final done   = prefs.getBool(_prefsDoneKey(period)) ?? false;
+    if (!mounted) return;
+    _periodKey = period;
+    if (count != _currentCount || done != _manualDone) {
+      setState(() {
+        _currentCount = count;
+        _manualDone   = done;
+      });
+    }
+  }
+
+  Future<void> _saveProgress() async {
+    final period = _periodKey;
+    if (period == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_prefsCountKey(period),  _currentCount);
+    await prefs.setBool(_prefsDoneKey(period), _manualDone);
   }
 
   @override
@@ -250,11 +310,15 @@ class _WirdItemCardState extends State<WirdItemCard>
                             _currentCount = 0;
                           }
                         });
+                        _saveProgress();
                       },
-                      onReset: () => setState(() {
-                        _currentCount = 0;
-                        _manualDone   = false;
-                      }),
+                      onReset: () {
+                        setState(() {
+                          _currentCount = 0;
+                          _manualDone   = false;
+                        });
+                        _saveProgress();
+                      },
                     ),
                     // ── Ligne سبحة يدوية ──────────────────────────────
                     if (!_manualDone && _currentCount < target) ...[        
@@ -263,6 +327,7 @@ class _WirdItemCardState extends State<WirdItemCard>
                         onTap: () {
                           _triggerCompletion();
                           setState(() => _manualDone = true);
+                          _saveProgress();
                         },
                       ),
                     ],
@@ -274,7 +339,10 @@ class _WirdItemCardState extends State<WirdItemCard>
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: _ReadToggleButton(
                   isDone: isCompleted,
-                  onToggle: () => setState(() => _currentCount = isCompleted ? 0 : 1),
+                  onToggle: () {
+                    setState(() => _currentCount = isCompleted ? 0 : 1);
+                    _saveProgress();
+                  },
                 ),
               ),
           ],

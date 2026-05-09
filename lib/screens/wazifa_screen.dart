@@ -28,6 +28,7 @@ class WazifaScreen extends StatelessWidget {
               (context, index) => WirdItemCard(
                 item: wazifaItems[index],
                 index: index,
+                listId: wazifaItems[index].eveningOnly ? 'wazifa_m' : 'wazifa_s',
               ),
               childCount: wazifaItems.length,
             ),

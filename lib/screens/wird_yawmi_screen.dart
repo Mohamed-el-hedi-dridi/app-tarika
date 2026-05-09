@@ -26,6 +26,7 @@ class WirdYawmiScreen extends StatelessWidget {
               (context, index) => WirdItemCard(
                 item: wirdYawmiItems[index],
                 index: index,
+                listId: 'yawmi',
               ),
               childCount: wirdYawmiItems.length,
             ),

@@ -28,6 +28,7 @@ class WirdAamScreen extends StatelessWidget {
               (context, index) => WirdItemCard(
                 item: wirdItems[index],
                 index: index,
+                listId: wirdItems[index].eveningOnly ? 'aam_m' : 'aam_s',
               ),
               childCount: wirdItems.length,
             ),

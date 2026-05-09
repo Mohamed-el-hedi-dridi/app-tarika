@@ -29,6 +29,7 @@ class TahsinScreen extends StatelessWidget {
               (context, index) => WirdItemCard(
                 item: tahsinItems[index],
                 index: index,
+                listId: 'tahsin',
               ),
               childCount: tahsinItems.length,
             ),
@@ -41,6 +42,7 @@ class TahsinScreen extends StatelessWidget {
               (context, index) => WirdItemCard(
                 item: tahsinRuqyaItems[index],
                 index: index,
+                listId: 'ruqya',
               ),
               childCount: tahsinRuqyaItems.length,
             ),
