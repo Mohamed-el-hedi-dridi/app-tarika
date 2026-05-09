@@ -32,6 +32,30 @@ class IslamicHeader extends StatelessWidget {
               fit: BoxFit.cover,
             ),
           ),
+          // Gradient charte graphique : vignette verte bas + bord doré
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.0, 0.55, 1.0],
+                  colors: [
+                    Colors.transparent,
+                    Colors.transparent,
+                    AppTheme.primaryGreen.withValues(alpha: 0.45),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Bordure dorée en bas
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(height: 3, color: AppTheme.gold.withValues(alpha: 0.8)),
+          ),
           // Bouton retour uniquement
           if (showBack)
             Positioned(

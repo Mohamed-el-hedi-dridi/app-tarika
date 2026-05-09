@@ -55,9 +55,36 @@ class HomeScreen extends StatelessWidget {
       child: SizedBox(
         height: 220,
         width: double.infinity,
-        child: Image.asset(
-          'assets/images/hero_mosque.png',
-          fit: BoxFit.cover,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/images/hero_mosque.png',
+              fit: BoxFit.cover,
+            ),
+            // Gradient charte graphique : vignette verte bas + bord doré
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.0, 0.55, 1.0],
+                  colors: [
+                    Colors.transparent,
+                    Colors.transparent,
+                    AppTheme.primaryGreen.withValues(alpha: 0.45),
+                  ],
+                ),
+              ),
+            ),
+            // Bordure dorée en bas
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(height: 3, color: AppTheme.gold.withValues(alpha: 0.8)),
+            ),
+          ],
         ),
       ),
     );
