@@ -32,7 +32,7 @@ class SoundService {
   /// Joue le bip de comptage (عدّ)
   static Future<void> playClick() async {
     try {
-      await _click.play(BytesSource(_clickWav), volume: 0.6);
+      await _click.play(BytesSource(_clickWav, mimeType: 'audio/wav'), volume: 0.6);
     } catch (e) {
       debugPrint('[Sound] playClick erreur: $e');
     }
@@ -41,7 +41,7 @@ class SoundService {
   /// Joue le bip de fin (compteur atteint)
   static Future<void> playDone() async {
     try {
-      await _done.play(BytesSource(_doneWav), volume: 0.7);
+      await _done.play(BytesSource(_doneWav, mimeType: 'audio/wav'), volume: 0.7);
     } catch (e) {
       debugPrint('[Sound] playDone erreur: $e');
     }
