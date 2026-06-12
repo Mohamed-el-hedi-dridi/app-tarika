@@ -12,6 +12,7 @@ import 'screens/tahsin_screen.dart';
 import 'screens/quran_screen.dart';
 import 'providers/reading_settings_provider.dart';
 import 'providers/wird_completion_provider.dart';
+import 'providers/custom_dhikr_provider.dart';
 import 'services/notification_service.dart';
 import 'services/update_service.dart';
 
@@ -48,6 +49,7 @@ class TarikaApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ReadingSettingsProvider()),
         ChangeNotifierProvider(create: (_) => WirdCompletionProvider()),
+        ChangeNotifierProvider(create: (_) => CustomDhikrProvider()),
       ],
       child: MaterialApp(
         title: 'أوراد الطريقة',

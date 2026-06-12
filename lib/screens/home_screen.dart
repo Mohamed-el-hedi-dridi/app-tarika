@@ -6,6 +6,7 @@ import '../main.dart';
 import '../services/notification_service.dart';
 import '../widgets/prayer_times_card.dart';
 import '../providers/wird_completion_provider.dart';
+import '../screens/custom_dhikr_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -32,6 +33,8 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _buildMenuGrid(context),
+                const SizedBox(height: 12),
+                _buildCustomDhikrCard(context),
                 const SizedBox(height: 24),
                 const PrayerTimesCard(),
                 const SizedBox(height: 12),
@@ -90,8 +93,75 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuGrid(BuildContext context) {
-    final items = [
+  Widget _buildCustomDhikrCard(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GestureDetector(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const CustomDhikrScreen(),
+          ),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF00695C),
+                const Color(0xFF00897B),
+              ],
+              begin: Alignment.centerRight,
+              end: Alignment.centerLeft,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF00695C).withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.stars_rounded,
+                    color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'أذكاري الخاصة',
+                      style: AppTheme.arabicTitle(size: 16, color: Colors.white),
+                    ),
+                    Text(
+                      'أضف ذكرك وتابع عدد مراته',
+                      style: AppTheme.arabicBody(
+                          size: 13,
+                          color: Colors.white.withValues(alpha: 0.85)),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white.withValues(alpha: 0.8), size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuGrid(BuildContext context) {    final items = [
       _MenuItem(
         title: 'دلائل الخيرات',
         subtitle: 'مفهرس بالأيام',
